@@ -161,8 +161,8 @@ class Deployer {
         /**
          * Attempt to update sub-modules
          */
-        $update_modules = (isset($repository['update_modules']) && $repository['update_modules'] !== "");
-        if ($update_modules && file_exists($repository['dir'] . ".gitmodules")) {
+        $update_modules = (!isset($repository['update_modules']) || $repository['update_modules'] !== "");
+        if ($update_modules && file_exists($dir . ".gitmodules")) {
             self::shell_exec($git . " submodule status", "GIT SUBMODULE STATUS");
             self::shell_exec($git . " submodule update --init", "GIT SUBMODULE UPDATE");
         }
