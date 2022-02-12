@@ -164,7 +164,7 @@ class Deployer {
         $update_modules = (isset($repository['update_modules']) && $repository['update_modules'] !== "");
         if ($update_modules && file_exists($repository['dir'] . ".gitmodules")) {
             self::shell_exec($git . " submodule status", "GIT SUBMODULE STATUS");
-            self::shell_exec($git . " submodule update --force", "GIT SUBMODULE UPDATE");
+            self::shell_exec($git . " submodule update --init", "GIT SUBMODULE UPDATE");
         }
 
         // Write to the log
