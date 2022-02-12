@@ -1,5 +1,7 @@
 # git-deploy
 
+(This is a POO version using shell_exec and an INI file)
+
 A PHP script to automatically pull from a repository to a web server (using a webhook on GitHub, GitLab, or Bitbucket).
 
 You can configure which branch this script pulls from. This script is useful for both development and production servers.

@@ -1,6 +1,6 @@
-# Disallow accessing anything in the directory other than ./deploy.php
+# Disallow accessing anything in the directory other than ./index.php
 Order allow,deny
 Deny from all
-<FilesMatch ^\/?deploy\.php$>
+<FilesMatch ^\/?index\.php$>
     Allow from all
 </FilesMatch>
