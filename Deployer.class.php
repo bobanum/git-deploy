@@ -90,15 +90,15 @@ class Deployer {
         // Write to the log
         self::output("*** {$label} ***");
 
-        $output = shell_exec("{$command} 2>&1; echo $?");
-        preg_match('#(?:\r\n|\n\r|\r|\n)([0-9]+)$#', $output, $res);
-        $exit = $res[1];
+        $output = trim(shell_exec("{$command} 2>&1; echo $?"));
+        preg_match('#[0-9]+$#', $output, $res);
+        $exit = $res[0];
         $output = substr($output, 0, -strlen($res[0]));
         self::output(trim($output));
 
         // If an error occurred, return 500 and log the error
-        if ($exit !== "0") {
-            self::output("=== ERROR: '{$label}' failed using GIT `{$command}` ===", 500);
+        if ($exit !== "0" && $exit !== "") {
+            self::output("=== ERROR {$exit}: '{$label}' failed using GIT `{$command}` ===", 500);
         }
     }
 
