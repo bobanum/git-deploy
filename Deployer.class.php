@@ -5,11 +5,7 @@ class Deployer {
     static public $content;
     static public $json;
     static public $file;
-    static public $token = false;
-    static public $algo = false;
     //OPTIONS
-    static public $full_name;
-    static public $update_modules = true;
     static public $git;
 
     static public function retrieveCheckoutSha() {
@@ -162,8 +158,12 @@ class Deployer {
         if (!empty($repository['after_pull'])) {
             self::shell_exec($repository['after_pull'], "AFTER_PULL");
         }
-
-        if (self::$update_modules && file_exists($repository['dir'] . ".gitmodules")) {
+        
+        /**
+         * Attempt to update sub-modules
+         */
+        $update_modules = (isset($repository['update_modules']) && $repository['update_modules'] !== "");
+        if ($update_modules && file_exists($repository['dir'] . ".gitmodules")) {
             self::shell_exec($git . " submodule status", "GIT SUBMODULE STATUS");
             self::shell_exec($git . " submodule update --force", "GIT SUBMODULE UPDATE");
         }
@@ -175,21 +175,16 @@ class Deployer {
         if (is_null($options)) {
             $options = self::reparse(parse_ini_file(self::INI_FILE, true));
         }
-        // specify that the response does not contain HTML
-        $secret = $options['secret'];
-        $repositories = (isset($options['repository'])) ? $options['repository'] : $options['repositories'];
-        $logfile = $options['logfile'];
-        self::$update_modules = (isset($options['update_modules']) && $options['update_modules'] !== "");
         self::$content = file_get_contents("php://input");
         self::$json = json_decode(self::$content, true);
-        self::$file = fopen($logfile, "a");
-
+        self::$file = fopen($options['logfile'], "a");
+        
+        // specify that the response does not contain HTML
         header("Content-Type: text/plain");
         
         // write the time to the log
         date_default_timezone_set("UTC");
-        $time = time();
-        self::output(date("d-m-Y (H:i:s)", $time));
+        self::output(date("d-m-Y (H:i:s)", time()));
         
         
         // use user-defined max_execution_time
@@ -197,26 +192,29 @@ class Deployer {
             ini_set("max_execution_time", $options['max_execution_time']);
         }
         
-        self::checkToken($secret);
+        self::checkToken($options['secret']);
         
+        $repositories = (isset($options['repository'])) ? $options['repository'] : $options['repositories'];
         $full_name = self::$json["repository"]["full_name"];
         if (empty($repositories[$full_name])) {
             return self::output("=== ERROR: REPOSITORY `" . $full_name . "` not found ===", 404);
         }
         $repository = $repositories[$full_name];
+
         $branch = "refs/heads/master";
         if (!isset($repository['branch']) || $repository['branch'] === "") {
             $branch = $repository['branch'];
         }
         
-        // check if pushed branch matches branch specified in config
-        if (self::$json["ref"] !== $branch) {
-            return self::output("=== ERROR: Pushed branch `" . self::$json["ref"] . "` does not match BRANCH `" . $branch . "` ===", 400);
+        // Check if pushed branch matches branch specified in config
+        $ref = self::$json["ref"];
+        if ($ref !== $branch) {
+            return self::output("=== ERROR: Pushed branch `" . $ref . "` does not match BRANCH `" . $branch . "` ===", 400);
         }
 
         self::process($options['git'], $repository);
         
-        // close the log
+        // Close the log
         self::output(PHP_EOL);
         fclose(self::$file);
     }
