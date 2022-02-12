@@ -9,7 +9,7 @@ class Deployer {
     static public $git;
 
     static public function retrieveCheckoutSha() {
-        // retrieve the checkout_sha
+        // Retrieve the checkout_sha
         if (isset(self::$json["checkout_sha"])) return self::$json["checkout_sha"];
         if (isset($_SERVER["checkout_sha"])) return $_SERVER["checkout_sha"];
         if (isset($_GET["sha"])) return $_GET["sha"];
@@ -24,15 +24,15 @@ class Deployer {
             echo $text . PHP_EOL;
         }
     }
-    // function to forbid access
+    // Function to forbid access
     static public function forbid($reason) {
-        // write the error to the log and the body
+        // Write the error to the log and the body
         self::output("=== ERROR: " . $reason . " ===" . PHP_EOL . "*** ACCESS DENIED ***", 403);
     
-        // close the log
+        // Close the log
         fclose(self::$file);
     
-        // stop executing
+        // Stop executing
         exit;
     }
     
@@ -66,7 +66,7 @@ class Deployer {
             return true;
         }
 
-        // if none of the above match, but a token exists, exit
+        // If none of the above match, but a token exists, exit
         return self::forbid("No token detected");
     }
     static public function reparse($array) {
@@ -87,17 +87,16 @@ class Deployer {
         return $result;
     }
     static public function shell_exec($command, $label = "") {
-        // write to the log
+        // Write to the log
         self::output("*** {$label} ***");
 
         $output = shell_exec("{$command} 2>&1; echo $?");
         preg_match('#(?:\r\n|\n\r|\r|\n)([0-9]+)$#', $output, $res);
         $exit = $res[1];
-        // var_export($res);
         $output = substr($output, 0, -strlen($res[0]));
         self::output(trim($output));
 
-        // if an error occurred, return 500 and log the error
+        // If an error occurred, return 500 and log the error
         if ($exit !== "0") {
             self::output("=== ERROR: '{$label}' failed using GIT `{$command}` ===", 500);
         }
@@ -117,10 +116,10 @@ class Deployer {
         if (!file_exists($dir . ".git")) {
             return self::output("=== ERROR: DIR `" . $dir . "` is not a repository ===", 404);
         }
-        // change directory to the repository
+        // Change directory to the repository
         chdir($dir);
 
-        // write to the log
+        // Write to the log
         self::output("*** AUTO PULL INITIATED ***");
 
         self::shell_exec($git . " status", "GIT STATUS");
@@ -168,7 +167,7 @@ class Deployer {
             self::shell_exec($git . " submodule update --force", "GIT SUBMODULE UPDATE");
         }
 
-        // write to the log
+        // Write to the log
         self::output("*** AUTO PULL COMPLETE ***");
     }
     static public function exec($options = null) {
@@ -179,15 +178,15 @@ class Deployer {
         self::$json = json_decode(self::$content, true);
         self::$file = fopen($options['logfile'], "a");
         
-        // specify that the response does not contain HTML
+        // Specify that the response does not contain HTML
         header("Content-Type: text/plain");
         
-        // write the time to the log
+        // Write the time to the log
         date_default_timezone_set("UTC");
         self::output(date("d-m-Y (H:i:s)", time()));
         
         
-        // use user-defined max_execution_time
+        // Use user-defined max_execution_time
         if (!empty($options['max_execution_time'])) {
             ini_set("max_execution_time", $options['max_execution_time']);
         }
