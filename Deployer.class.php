@@ -6,7 +6,9 @@ class Deployer {
     static public $json;
     static public $file;
     //OPTIONS
-    static public $git;
+    static public $git_username = false;
+    static public $git_password = false;
+
 
     static public function retrieveCheckoutSha() {
         // Retrieve the checkout_sha
@@ -42,6 +44,7 @@ class Deployer {
         // Check for a GitHub signature
         if (isset($_SERVER["HTTP_X_HUB_SIGNATURE"])) {
             list($algo, $token) = explode("=", $_SERVER["HTTP_X_HUB_SIGNATURE"], 2) + array("", "");
+            var_dump($token, $secret, $_SERVER);
             if ($token !== hash_hmac($algo, self::$content, $secret)) {
                 return self::forbid("X-Hub-Signature does not match TOKEN");
             }
@@ -141,7 +144,24 @@ class Deployer {
         /**
          * Attempt to PULL
          */
-        self::shell_exec($git . " pull", "PULL");
+        $id = "";
+        if (!empty($repository['git_username'])) {
+            $id = $repository['git_username'];
+            if (!empty($repository['git_password'])) {
+                $password = $repository['git_password'];
+                if (preg_match('#^ghp_[a-zA-Z0-9]{36}$#', $password)) {
+                    $id .= ":" . $password;
+                } else if(preg_match('#^[a-zA-Z0-9\+\/]{36}$#', $password)) {
+                    $id .= ":" . base64_decode(str_pad($password, ceil(strlen($password) / 4) * 4, '=', STR_PAD_RIGHT));
+                }
+            }
+        }
+        if ($id) {
+            $git_url = preg_replace('#[a-zA-Z]+://#', ' ${1}' . $id, $repository['git_url']);
+        } else {
+            $git_url = "";
+        }
+        self::shell_exec($git . " pull{$git_url}", "PULL");
 
         /**
          * Attempt to checkout specific hash if specified
@@ -174,6 +194,7 @@ class Deployer {
         if (is_null($options)) {
             $options = self::reparse(parse_ini_file(self::INI_FILE, true));
         }
+		var_dump($options);
         self::$content = file_get_contents("php://input");
         self::$json = json_decode(self::$content, true);
         self::$file = fopen($options['logfile'], "a");
@@ -209,6 +230,14 @@ class Deployer {
         $ref = self::$json["ref"];
         if ($ref !== $branch) {
             return self::output("=== ERROR: Pushed branch `" . $ref . "` does not match BRANCH `" . $branch . "` ===", 400);
+        }
+
+        $repository['git_url'] = self::$json['repository']['git_url'];
+        if (empty($repository['git_username']) && !empty($options['git_username'])) {
+            $repository['git_username'] = $options['git_username'];
+        }
+        if (empty($repository['git_password']) && !empty($options['git_password'])) {
+            $repository['git_password'] = $options['git_password'];
         }
 
         self::process($options['git'], $repository);
